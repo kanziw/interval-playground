@@ -1,7 +1,18 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
 # https://taskfile.dev
 version: "3"
 
 tasks:
+  run:
+    desc: Starts the app in development mode.
+    run: once
+    deps:
+      - up
+      - prepare:app
+    cmds:
+      - defer: { task: down }
+      - yarn dev
+
   default:
     cmds:
       - task: install:prereqs
@@ -25,6 +36,8 @@ tasks:
     internal: true
     desc: Installs tools
     run: once
+    deps:
+      - install:prereqs
     cmds:
       - asdf plugin add nodejs
       - asdf plugin add postgres
@@ -37,9 +50,18 @@ tasks:
     internal: true
     desc: Prepares the interval server.
     run: once
+    deps:
+      - install:tools
+      - up:db
     cmds:
-      - docker compose --profile db up -d
-      - asdf reshim nodejs
+      - psql postgresql://postgres:postgres@localhost:5432/postgres -lqt | cut -d \| -f 1 | grep -qw 'interval' && echo "Database 'interval' exists" || task initialize:db;
+  
+  initialize:db:
+    desc: Initializes the database.
+    run: once
+    deps:
+      - up:db
+    cmds:
       - npm i -g yarn
       - npm i -g @interval/server@1.0.3
       - interval-server db-init
@@ -52,11 +74,27 @@ tasks:
     cmds:
       - docker compose --profile db --profile interval-server up -d
 
-  down:
-    desc: Stops the interval server.
+  up:db:
+    desc: Starts the database.
     run: once
     cmds:
+      - docker compose --profile db up -d
+
+  down:
+    desc: Stops the interval server.
+    cmds:
       - docker compose --profile db --profile interval-server down
+
+  down:db:
+    desc: Stops the database.
+    cmds:
+      - docker compose --profile db down
+
+  logs:
+    desc: Shows the interval server logs.
+    run: once
+    cmds:
+      - docker logs -f $(docker ps --filter "ancestor=alexarena/interval-server:1.0.3" -q)
 
   reset:
     desc: Resets the interval server.
@@ -72,11 +110,3 @@ tasks:
       - yarn install
     sources:
       - yarn.lock
-
-  dev:
-    desc: Starts the app in development mode.
-    run: once
-    deps:
-      - prepare:app
-    cmds:
-      - yarn dev

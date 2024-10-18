@@ -16,12 +16,12 @@ $ task --list
 
 ### Up interval server
 ```shell
-$ task up
+$ task run
 ```
 
 ### Apps
-- PG adminer: http://localhost:8080
 - Interval Server: http://localhost:3000 
+- PG adminer: http://localhost:8080
 
 ### Down interval server
 ```shell
