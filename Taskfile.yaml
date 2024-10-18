@@ -7,6 +7,7 @@ tasks:
       - task: install:prereqs
       - task: install:tools
       - task: prepare:interval-server
+      - task: prepare:app
 
   install:prereqs:
     internal: true
@@ -62,3 +63,20 @@ tasks:
     run: once
     cmds:
       - docker compose --profile db --profile interval-server down --volumes --rmi all --remove-orphans
+
+  prepare:app:
+    internal: true
+    desc: Prepares the app.
+    run: once
+    cmds:
+      - yarn install
+    sources:
+      - yarn.lock
+
+  dev:
+    desc: Starts the app in development mode.
+    run: once
+    deps:
+      - prepare:app
+    cmds:
+      - yarn dev
