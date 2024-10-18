@@ -1,0 +1,64 @@
+# https://taskfile.dev
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task: install:prereqs
+      - task: install:tools
+      - task: prepare:interval-server
+
+  install:prereqs:
+    internal: true
+    desc: Installs prerequisites
+    run: once
+    cmds:
+      - brew bundle
+    sources:
+      - Brewfile
+    preconditions:
+      - sh: command -v brew
+        msg: "Please install Homebrew: https://brew.sh/"
+
+  install:tools:
+    internal: true
+    desc: Installs tools
+    run: once
+    cmds:
+      - asdf plugin add nodejs
+      - asdf plugin add postgres
+      - PKG_CONFIG_PATH="/opt/homebrew/opt/icu4c/lib/pkgconfig" asdf install
+      - asdf current
+    sources:
+      - .tool-versions
+
+  prepare:interval-server:
+    internal: true
+    desc: Prepares the interval server.
+    run: once
+    cmds:
+      - docker compose --profile db up -d
+      - asdf reshim nodejs
+      - npm i -g yarn
+      - npm i -g @interval/server@1.0.3
+      - interval-server db-init
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/interval
+
+  up:
+    desc: Starts the interval server.
+    run: once
+    cmds:
+      - docker compose --profile db --profile interval-server up -d
+
+  down:
+    desc: Stops the interval server.
+    run: once
+    cmds:
+      - docker compose --profile db --profile interval-server down
+
+  reset:
+    desc: Resets the interval server.
+    run: once
+    cmds:
+      - docker compose --profile db --profile interval-server down --volumes --rmi all --remove-orphans
